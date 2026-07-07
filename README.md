@@ -63,11 +63,6 @@
 - `app.js`：刷题逻辑、错题本、进度统计和 JSON 导入导出。
 - `data/questions.js`：题库数据。
 
-## 更新网站
-
-这是一个纯静态网站，不需要后端服务。更新文件后，把改动提交到 GitHub 仓库的 `main` 分支即可，GitHub Pages 会自动重新发布。
-
-仓库地址：[https://github.com/wynnema02/cippe-preparation](https://github.com/wynnema02/cippe-preparation)
 
 ## 本地预览
 
