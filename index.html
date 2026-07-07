@@ -63,6 +63,31 @@
         </form>
       </section>
 
+      <section class="sync-panel" aria-label="进度同步">
+        <div>
+          <p class="eyebrow">Progress Sync</p>
+          <h2>进度同步</h2>
+        </div>
+        <div class="sync-controls">
+          <div class="sync-mode" role="radiogroup" aria-label="导入方式">
+            <label>
+              <input type="radio" name="importMode" value="merge" checked />
+              <span>合并导入</span>
+            </label>
+            <label>
+              <input type="radio" name="importMode" value="replace" />
+              <span>覆盖导入</span>
+            </label>
+          </div>
+          <div class="sync-actions">
+            <button id="exportProgressButton" type="button" class="secondary">导出进度</button>
+            <button id="importProgressButton" type="button">导入进度</button>
+            <input id="importProgressFile" class="hidden" type="file" accept="application/json,.json" />
+          </div>
+          <p id="syncStatus" class="sync-status" aria-live="polite"></p>
+        </div>
+      </section>
+
       <section id="quizPanel" class="quiz-panel hidden">
         <div class="quiz-toolbar">
           <div>
