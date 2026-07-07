@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CIPPE 刷题练习</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">CIPPE Practice</p>
+          <h1>CIPPE 289 题刷题</h1>
+        </div>
+        <div class="topbar-stats" aria-live="polite">
+          <span id="bankCount">题库载入中</span>
+          <span id="groupCount">材料组载入中</span>
+          <span id="progressCount">已刷 0/289</span>
+          <span id="attemptTotal">累计 0 题次</span>
+          <span id="wrongCount">错题 0</span>
+        </div>
+      </section>
+
+      <section id="modulePanel" class="module-panel" aria-label="练习模块">
+        <button type="button" class="module-tile active" data-mode="quiz">
+          <span>刷题模式</span>
+          <small>按题号顺序推进，交卷后看正确率</small>
+        </button>
+        <button type="button" class="module-tile" data-mode="study">
+          <span>背题模式</span>
+          <small>题目、答案和解析一起看</small>
+        </button>
+        <button type="button" class="module-tile" data-mode="wrong-review">
+          <span>错题回顾</span>
+          <small>集中复盘错题解析</small>
+        </button>
+        <button type="button" class="module-tile" data-mode="wrong-retry">
+          <span>错题重刷</span>
+          <small>答对后移出错题本</small>
+        </button>
+      </section>
+
+      <section id="setupPanel" class="setup-panel">
+        <div class="setup-copy">
+          <p class="eyebrow" id="modeEyebrow">刷题模式</p>
+          <h2 id="setupTitle">设置本轮练习</h2>
+          <p id="setupHint">输入想刷的题数后随机抽题。材料题会作为一个整体出现，因此最终题数可能为最接近的可行数量。</p>
+        </div>
+        <form id="quizSetup" class="setup-form">
+          <label for="questionCount">刷题数量</label>
+          <div class="count-row">
+            <input id="questionCount" name="questionCount" type="number" min="1" max="289" value="20" />
+            <button type="submit">开始刷题</button>
+          </div>
+          <div class="quick-actions" aria-label="快速题量">
+            <button type="button" data-count="10">10题</button>
+            <button type="button" data-count="25">25题</button>
+            <button type="button" data-count="50">50题</button>
+            <button type="button" data-count="289">全量</button>
+          </div>
+          <p id="emptyWrongHint" class="empty-hint hidden">错题本现在是空的。先完成一轮刷题，答错或未答的题会自动进入错题本。</p>
+        </form>
+      </section>
+
+      <section id="quizPanel" class="quiz-panel hidden">
+        <div class="quiz-toolbar">
+          <div>
+            <p class="eyebrow">本轮练习</p>
+            <h2 id="sessionTitle">练习中</h2>
+          </div>
+          <div class="toolbar-actions">
+            <button id="homeButton" type="button" class="secondary">返回模块</button>
+            <button id="reshuffleButton" type="button" class="secondary">重新抽题</button>
+            <button id="submitButton" type="button">交卷看解析</button>
+          </div>
+        </div>
+        <div id="questionList" class="question-list"></div>
+      </section>
+
+      <section id="resultPanel" class="result-panel hidden" aria-live="polite">
+        <div class="score-card">
+          <p class="eyebrow">结果</p>
+          <h2 id="scoreText">正确率</h2>
+          <p id="scoreDetail"></p>
+          <div class="toolbar-actions">
+            <button id="reviewWrongButton" type="button" class="secondary">只看错题</button>
+            <button id="newRoundButton" type="button">再来一轮</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./data/questions.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
