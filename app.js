@@ -1,6 +1,7 @@
 const questions = window.CIPPE_QUESTIONS || [];
 const WRONG_STORE_KEY = "cippeWrongBook:v1";
 const PROGRESS_STORE_KEY = "cippeProgress:v1";
+const SYNC_EXPORT_VERSION = 1;
 
 const state = {
   mode: "quiz",
@@ -40,6 +41,11 @@ const setupTitle = byId("setupTitle");
 const setupHint = byId("setupHint");
 const emptyWrongHint = byId("emptyWrongHint");
 const homeButton = byId("homeButton");
+const exportProgressButton = byId("exportProgressButton");
+const importProgressButton = byId("importProgressButton");
+const importProgressFile = byId("importProgressFile");
+const syncStatus = byId("syncStatus");
+const questionIds = new Set(questions.map((question) => question.id));
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -104,6 +110,181 @@ function saveWrongBook() {
 function saveProgressBook() {
   localStorage.setItem(PROGRESS_STORE_KEY, JSON.stringify(state.progressBook));
   updateStats();
+}
+
+function isPlainRecord(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeQuestionId(id) {
+  const numericId = Number(id);
+  return Number.isInteger(numericId) && questionIds.has(numericId) ? numericId : null;
+}
+
+function sanitizeIsoDate(value) {
+  if (typeof value !== "string") return "";
+  return Number.isNaN(Date.parse(value)) ? "" : value;
+}
+
+function sanitizeWrongBook(source) {
+  if (!isPlainRecord(source)) return {};
+  return Object.entries(source).reduce((book, [id, record]) => {
+    const questionId = normalizeQuestionId(id);
+    if (!questionId) return book;
+    const safeRecord = isPlainRecord(record) ? record : {};
+    book[questionId] = {
+      wrongTimes: Math.max(1, Number(safeRecord.wrongTimes) || 1),
+      lastAnswer: String(safeRecord.lastAnswer || "未作答").slice(0, 40),
+      updatedAt: sanitizeIsoDate(safeRecord.updatedAt) || new Date().toISOString(),
+    };
+    return book;
+  }, {});
+}
+
+function sanitizeProgressBook(source) {
+  if (!isPlainRecord(source)) return {};
+  return Object.entries(source).reduce((book, [id, record]) => {
+    const questionId = normalizeQuestionId(id);
+    if (!questionId || !isPlainRecord(record)) return book;
+    const attempts = Math.max(0, Number(record.attempts) || 0);
+    if (!attempts) return book;
+    book[questionId] = {
+      attempts,
+      lastPracticedAt: sanitizeIsoDate(record.lastPracticedAt) || "",
+    };
+    return book;
+  }, {});
+}
+
+function latestIso(left, right) {
+  if (!left) return right || "";
+  if (!right) return left;
+  return Date.parse(left) >= Date.parse(right) ? left : right;
+}
+
+function mergeWrongBook(current, imported) {
+  const merged = { ...current };
+  Object.entries(imported).forEach(([id, incoming]) => {
+    const existing = merged[id];
+    if (!existing) {
+      merged[id] = incoming;
+      return;
+    }
+    const incomingIsNewer = Date.parse(incoming.updatedAt || "") > Date.parse(existing.updatedAt || "");
+    merged[id] = {
+      wrongTimes: Math.max(Number(existing.wrongTimes) || 1, Number(incoming.wrongTimes) || 1),
+      lastAnswer: incomingIsNewer ? incoming.lastAnswer : existing.lastAnswer,
+      updatedAt: latestIso(existing.updatedAt, incoming.updatedAt),
+    };
+  });
+  return merged;
+}
+
+function mergeProgressBook(current, imported) {
+  const merged = { ...current };
+  Object.entries(imported).forEach(([id, incoming]) => {
+    const existing = merged[id];
+    if (!existing) {
+      merged[id] = incoming;
+      return;
+    }
+    merged[id] = {
+      attempts: Math.max(Number(existing.attempts) || 0, Number(incoming.attempts) || 0),
+      lastPracticedAt: latestIso(existing.lastPracticedAt, incoming.lastPracticedAt),
+    };
+  });
+  return merged;
+}
+
+function progressSummary(progressBook = state.progressBook, wrongBook = state.wrongBook) {
+  return {
+    covered: questions.filter((question) => progressBook[question.id]?.attempts > 0).length,
+    attempts: questions.reduce((sum, question) => sum + (progressBook[question.id]?.attempts || 0), 0),
+    wrong: Object.keys(wrongBook).filter((id) => questionIds.has(Number(id))).length,
+  };
+}
+
+function setSyncStatus(message, kind = "") {
+  syncStatus.textContent = message;
+  syncStatus.dataset.kind = kind;
+}
+
+function exportProgress() {
+  const payload = {
+    app: "cippe-practice",
+    version: SYNC_EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    questionBank: {
+      count: questions.length,
+      firstId: questions[0]?.id || null,
+      lastId: questions[questions.length - 1]?.id || null,
+    },
+    wrongBook: sanitizeWrongBook(state.wrongBook),
+    progressBook: sanitizeProgressBook(state.progressBook),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
+  const objectUrl = URL.createObjectURL(blob);
+  link.href = objectUrl;
+  link.download = `cippe-progress-${stamp}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+  const summary = progressSummary(payload.progressBook, payload.wrongBook);
+  setSyncStatus(`已导出：${summary.covered} 题，错题 ${summary.wrong}。`, "success");
+}
+
+function parseImportPayload(payload) {
+  if (!isPlainRecord(payload)) throw new Error("文件格式不正确");
+  const wrongBook = sanitizeWrongBook(payload.wrongBook);
+  const progressBook = sanitizeProgressBook(payload.progressBook);
+  if (!Object.keys(wrongBook).length && !Object.keys(progressBook).length) {
+    throw new Error("没有找到可导入的进度");
+  }
+  return { wrongBook, progressBook };
+}
+
+function applyImportedProgress(imported, mode) {
+  state.wrongBook = mode === "replace" ? imported.wrongBook : mergeWrongBook(state.wrongBook, imported.wrongBook);
+  state.progressBook = mode === "replace" ? imported.progressBook : mergeProgressBook(state.progressBook, imported.progressBook);
+  localStorage.setItem(WRONG_STORE_KEY, JSON.stringify(state.wrongBook));
+  localStorage.setItem(PROGRESS_STORE_KEY, JSON.stringify(state.progressBook));
+  updateStats();
+  refreshWrongSession();
+  if (!quizPanel.classList.contains("hidden")) renderQuiz();
+  const summary = progressSummary();
+  setSyncStatus(`已${mode === "replace" ? "覆盖" : "合并"}：${summary.covered} 题，错题 ${summary.wrong}。`, "success");
+}
+
+function selectedImportMode() {
+  return document.querySelector('input[name="importMode"]:checked')?.value || "merge";
+}
+
+function handleImportProgressFile(file) {
+  if (!file) return;
+  const mode = selectedImportMode();
+  if (mode === "replace" && !window.confirm("覆盖导入会清空当前设备的本地进度，确定继续？")) {
+    importProgressFile.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const imported = parseImportPayload(JSON.parse(reader.result));
+      applyImportedProgress(imported, mode);
+    } catch (error) {
+      setSyncStatus(error.message || "导入失败", "error");
+    } finally {
+      importProgressFile.value = "";
+    }
+  });
+  reader.addEventListener("error", () => {
+    setSyncStatus("文件读取失败", "error");
+    importProgressFile.value = "";
+  });
+  reader.readAsText(file);
 }
 
 function groupQuestions(source) {
@@ -539,6 +720,9 @@ function initialize() {
   newRoundButton.addEventListener("click", returnHome);
   homeButton.addEventListener("click", returnHome);
   reviewWrongButton.addEventListener("click", toggleWrongOnly);
+  exportProgressButton.addEventListener("click", exportProgress);
+  importProgressButton.addEventListener("click", () => importProgressFile.click());
+  importProgressFile.addEventListener("change", () => handleImportProgressFile(importProgressFile.files[0]));
 }
 
 initialize();
