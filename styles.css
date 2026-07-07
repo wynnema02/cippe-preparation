@@ -76,6 +76,7 @@ button:disabled {
 .topbar,
 .module-panel,
 .setup-panel,
+.sync-panel,
 .quiz-toolbar,
 .score-card {
   background: rgba(255, 255, 255, 0.88);
@@ -231,6 +232,66 @@ input[type="number"] {
   font-size: 14px;
   line-height: 1.6;
   margin: 12px 0 0;
+}
+
+.sync-panel {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, auto);
+  margin-top: 22px;
+  padding: 20px 24px;
+}
+
+.sync-controls {
+  display: grid;
+  gap: 12px;
+  justify-items: end;
+}
+
+.sync-mode,
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.sync-mode label {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent-strong);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.sync-mode input {
+  accent-color: var(--accent);
+}
+
+.sync-status {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.5;
+  margin: 0;
+  min-height: 21px;
+  text-align: right;
+}
+
+.sync-status[data-kind="success"] {
+  color: var(--right);
+}
+
+.sync-status[data-kind="error"] {
+  color: var(--wrong);
 }
 
 .quiz-panel {
@@ -431,6 +492,7 @@ input[type="number"] {
   .topbar,
   .module-panel,
   .setup-panel,
+  .sync-panel,
   .quiz-toolbar {
     display: grid;
   }
@@ -443,6 +505,10 @@ input[type="number"] {
     grid-template-columns: 1fr;
   }
 
+  .sync-panel {
+    grid-template-columns: 1fr;
+  }
+
   .count-row {
     grid-template-columns: 1fr;
   }
@@ -452,11 +518,27 @@ input[type="number"] {
   }
 
   .toolbar-actions,
-  .topbar-stats {
+  .topbar-stats,
+  .sync-actions,
+  .sync-mode {
     justify-content: stretch;
   }
 
-  .toolbar-actions button {
+  .toolbar-actions button,
+  .sync-actions button {
     flex: 1;
+  }
+
+  .sync-controls {
+    justify-items: stretch;
+  }
+
+  .sync-mode label {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .sync-status {
+    text-align: left;
   }
 }
